@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 
-st.title('🤖 Machine Learning App')
+st.title('🤖 AppoML')
 
-st.info('This is app builds a machine learning model!')
+st.info('This is app builds a machine learning model for predicting the species of penguin')
 
 with st.expander('Data'):
   st.write('**Raw data**')
