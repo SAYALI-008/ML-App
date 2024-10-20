@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
+import pydeck as pdk
 
 st.title('🤖 AppoML')
 
@@ -21,7 +22,46 @@ with st.expander('Data'):
   y_raw
 
 with st.expander('Data visualization'):
-  st.scatter_chart(data=df, x='bill_length_mm', y='body_mass_g', color='species')
+  with st.expander('Scatter Plot'):
+    st.scatter_chart(data=df, x='bill_length_mm', y='body_mass_g', color='species')
+  with st.expander('Species in Islands'):
+    species_counts = penguins.groupby(['island', 'species']).size().reset_index(name='count')
+    island_coords = {
+    'Biscoe': [-64.75, -64.5],
+    'Dream': [-64.25, -64.1],
+    'Torgersen': [-64.2, -64.05],
+   }
+
+    species_counts['coordinates'] = species_counts['island'].map(island_coords)
+    st.pydeck_chart(pdk.Deck(
+        map_style=None,
+        initial_view_state=pdk.ViewState(
+            latitude=-64.5,  # Centering latitude
+            longitude=-64.2,  # Centering longitude
+            zoom=6,  # Zoom level
+            pitch=50,
+        ),
+        layers=[
+            # Layer to visualize species count in each island
+            pdk.Layer(
+                "ScatterplotLayer",
+                data=species_counts,
+                get_position="coordinates",
+                get_color="[200, 30, 0, 160]",
+                get_radius="count * 100",  # Scale the radius by species count
+                pickable=True,
+            ),
+        ],
+        tooltip={
+            "html": "<b>Island:</b> {island} <br/> <b>Species:</b> {species} <br/> <b>Count:</b> {count}",
+            "style": {
+                "color": "white",
+                "background-color": "black",
+            }
+        }
+    ))
+
+
 
 # Input features
 with st.sidebar:
