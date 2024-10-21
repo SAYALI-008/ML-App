@@ -1,68 +1,80 @@
 import streamlit as st
 import pandas as pd
-import base64
-import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
+import pickle
+from sklearn.ensemble import RandomForestClassifier
 
-st.title('NBA Player Stats Explorer')
+st.write("""
+# Penguin Prediction App
 
-st.markdown("""
-This app performs simple webscraping of NBA player stats data!
-* **Python libraries:** base64, pandas, streamlit
-* **Data source:** [Basketball-reference.com](https://www.basketball-reference.com/).
+This app predicts the **Palmer Penguin** species!
+
+Data obtained from the [palmerpenguins library](https://github.com/allisonhorst/palmerpenguins) in R by Allison Horst.
 """)
 
 st.sidebar.header('User Input Features')
-selected_year = st.sidebar.selectbox('Year', list(reversed(range(1950,2020))))
 
-# Web scraping of NBA player stats
-@st.cache
-def load_data(year):
-    url = "https://www.basketball-reference.com/leagues/NBA_" + str(year) + "_per_game.html"
-    html = pd.read_html(url, header = 0)
-    df = html[0]
-    raw = df.drop(df[df.Age == 'Age'].index) # Deletes repeating headers in content
-    raw = raw.fillna(0)
-    playerstats = raw.drop(['Rk'], axis=1)
-    return playerstats
-playerstats = load_data(selected_year)
+st.sidebar.markdown("""
+[Example CSV input file](https://raw.githubusercontent.com/dataprofessor/data/master/penguins_example.csv)
+""")
 
-# Sidebar - Team selection
-sorted_unique_team = sorted(playerstats.Tm.unique())
-selected_team = st.sidebar.multiselect('Team', sorted_unique_team, sorted_unique_team)
+# Collects user input features into dataframe
+uploaded_file = st.sidebar.file_uploader("Upload your input CSV file", type=["csv"])
+if uploaded_file is not None:
+    input_df = pd.read_csv(uploaded_file)
+else:
+    def user_input_features():
+        island = st.sidebar.selectbox('Island',('Biscoe','Dream','Torgersen'))
+        sex = st.sidebar.selectbox('Sex',('male','female'))
+        bill_length_mm = st.sidebar.slider('Bill length (mm)', 32.1,59.6,43.9)
+        bill_depth_mm = st.sidebar.slider('Bill depth (mm)', 13.1,21.5,17.2)
+        flipper_length_mm = st.sidebar.slider('Flipper length (mm)', 172.0,231.0,201.0)
+        body_mass_g = st.sidebar.slider('Body mass (g)', 2700.0,6300.0,4207.0)
+        data = {'island': island,
+                'bill_length_mm': bill_length_mm,
+                'bill_depth_mm': bill_depth_mm,
+                'flipper_length_mm': flipper_length_mm,
+                'body_mass_g': body_mass_g,
+                'sex': sex}
+        features = pd.DataFrame(data, index=[0])
+        return features
+    input_df = user_input_features()
 
-# Sidebar - Position selection
-unique_pos = ['C','PF','SF','PG','SG']
-selected_pos = st.sidebar.multiselect('Position', unique_pos, unique_pos)
+# Combines user input features with entire penguins dataset
+# This will be useful for the encoding phase
+penguins_raw = pd.read_csv('penguins_cleaned.csv')
+penguins = penguins_raw.drop(columns=['species'])
+df = pd.concat([input_df,penguins],axis=0)
 
-# Filtering data
-df_selected_team = playerstats[(playerstats.Tm.isin(selected_team)) & (playerstats.Pos.isin(selected_pos))]
+# Encoding of ordinal features
+# https://www.kaggle.com/pratik1120/penguin-dataset-eda-classification-and-clustering
+encode = ['sex','island']
+for col in encode:
+    dummy = pd.get_dummies(df[col], prefix=col)
+    df = pd.concat([df,dummy], axis=1)
+    del df[col]
+df = df[:1] # Selects only the first row (the user input data)
 
-st.header('Display Player Stats of Selected Team(s)')
-st.write('Data Dimension: ' + str(df_selected_team.shape[0]) + ' rows and ' + str(df_selected_team.shape[1]) + ' columns.')
-st.dataframe(df_selected_team)
+# Displays the user input features
+st.subheader('User Input features')
 
-# Download NBA player stats data
-# https://discuss.streamlit.io/t/how-to-download-file-in-streamlit/1806
-def filedownload(df):
-    csv = df.to_csv(index=False)
-    b64 = base64.b64encode(csv.encode()).decode()  # strings <-> bytes conversions
-    href = f'<a href="data:file/csv;base64,{b64}" download="playerstats.csv">Download CSV File</a>'
-    return href
+if uploaded_file is not None:
+    st.write(df)
+else:
+    st.write('Awaiting CSV file to be uploaded. Currently using example input parameters (shown below).')
+    st.write(df)
 
-st.markdown(filedownload(df_selected_team), unsafe_allow_html=True)
+# Reads in saved classification model
+load_clf = pickle.load(open('penguins_clf.pkl', 'rb'))
 
-# Heatmap
-if st.button('Intercorrelation Heatmap'):
-    st.header('Intercorrelation Matrix Heatmap')
-    df_selected_team.to_csv('output.csv',index=False)
-    df = pd.read_csv('output.csv')
+# Apply model to make predictions
+prediction = load_clf.predict(df)
+prediction_proba = load_clf.predict_proba(df)
 
-    corr = df.corr()
-    mask = np.zeros_like(corr)
-    mask[np.triu_indices_from(mask)] = True
-    with sns.axes_style("white"):
-        f, ax = plt.subplots(figsize=(7, 5))
-        ax = sns.heatmap(corr, mask=mask, vmax=1, square=True)
-    st.pyplot()
+
+st.subheader('Prediction')
+penguins_species = np.array(['Adelie','Chinstrap','Gentoo'])
+st.write(penguins_species[prediction])
+
+st.subheader('Prediction Probability')
+st.write(prediction_proba)
