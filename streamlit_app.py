@@ -50,10 +50,10 @@ x_axis = st.sidebar.selectbox('Select X-axis Feature', penguins.columns, index=0
 y_axis = st.sidebar.selectbox('Select Y-axis Feature', penguins.columns, index=1)
 hue_feature = st.sidebar.selectbox('Select Hue (Categorical)', ['species', 'island', 'sex'])
 
-# Scatterplot of the selected features
-st.subheader(f'Scatterplot: {x_axis} vs {y_axis}')
-fig = px.scatter(penguins, x=x_axis, y=y_axis, color=hue_feature, title=f'{x_axis} vs {y_axis}')
-st.plotly_chart(fig)
+# # Scatterplot of the selected features
+# st.subheader(f'Scatterplot: {x_axis} vs {y_axis}')
+# fig = px.scatter(penguins, x=x_axis, y=y_axis, color=hue_feature, title=f'{x_axis} vs {y_axis}')
+# st.plotly_chart(fig)
 
 # Correlation heatmap
 st.subheader('Correlation Heatmap')
@@ -62,11 +62,11 @@ fig, ax = plt.subplots()
 sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
 st.pyplot(fig)
 
-# Histograms
-st.subheader('Histograms')
-feature_hist = st.sidebar.selectbox('Select Feature for Histogram', penguins.columns, index=3)
-fig_hist = px.histogram(penguins, x=feature_hist, color=hue_feature, title=f'Histogram of {feature_hist}')
-st.plotly_chart(fig_hist)
+# # Histograms
+# st.subheader('Histograms')
+# feature_hist = st.sidebar.selectbox('Select Feature for Histogram', penguins.columns, index=3)
+# fig_hist = px.histogram(penguins, x=feature_hist, color=hue_feature, title=f'Histogram of {feature_hist}')
+# st.plotly_chart(fig_hist)
 
 # Pairplot for multi-feature relationships
 st.subheader('Pairplot')
