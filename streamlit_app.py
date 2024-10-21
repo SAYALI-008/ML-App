@@ -24,45 +24,58 @@ with st.expander('Data'):
 with st.expander('Data visualization'):
   with st.expander('Scatter Plot'):
     st.scatter_chart(data=df, x='bill_length_mm', y='body_mass_g', color='species')
-  with st.expander('Species in Islands'):
-    species_counts = penguins.groupby(['island', 'species']).size().reset_index(name='count')
-    island_coords = {
-    'Biscoe': [-64.75, -64.5],
-    'Dream': [-64.25, -64.1],
-    'Torgersen': [-64.2, -64.05],
-   }
-
-    species_counts['coordinates'] = species_counts['island'].map(island_coords)
-    st.pydeck_chart(pdk.Deck(
-        map_style=None,
-        initial_view_state=pdk.ViewState(
-            latitude=-64.5,  # Centering latitude
-            longitude=-64.2,  # Centering longitude
-            zoom=6,  # Zoom level
-            pitch=50,
-        ),
-        layers=[
-            # Layer to visualize species count in each island
-            pdk.Layer(
-                "ScatterplotLayer",
-                data=species_counts,
-                get_position="coordinates",
-                get_color="[200, 30, 0, 160]",
-                get_radius="count * 100",  # Scale the radius by species count
-                pickable=True,
-            ),
-        ],
-        tooltip={
-            "html": "<b>Island:</b> {island} <br/> <b>Species:</b> {species} <br/> <b>Count:</b> {count}",
-            "style": {
-                "color": "white",
-                "background-color": "black",
-            }
-        }
-    ))
 
 
+# Sidebar for user interaction
+st.sidebar.header('User Input Features')
 
+penguins = df
+# Display the dataset
+st.header('Penguins Dataset')
+st.write(penguins.head())
+
+# Display basic information about the dataset
+st.subheader('Basic Information')
+st.write(penguins.describe())
+
+# Show number of missing values
+st.subheader('Missing Values')
+st.write(penguins.isnull().sum())
+
+# Replace missing values (if needed)
+penguins.fillna(method='ffill', inplace=True)
+
+# Select features to visualize
+st.sidebar.subheader('Choose Features to Visualize')
+x_axis = st.sidebar.selectbox('Select X-axis Feature', penguins.columns, index=0)
+y_axis = st.sidebar.selectbox('Select Y-axis Feature', penguins.columns, index=1)
+hue_feature = st.sidebar.selectbox('Select Hue (Categorical)', ['species', 'island', 'sex'])
+
+# Scatterplot of the selected features
+st.subheader(f'Scatterplot: {x_axis} vs {y_axis}')
+fig = px.scatter(penguins, x=x_axis, y=y_axis, color=hue_feature, title=f'{x_axis} vs {y_axis}')
+st.plotly_chart(fig)
+
+# Correlation heatmap
+st.subheader('Correlation Heatmap')
+corr_matrix = penguins.corr()
+fig, ax = plt.subplots()
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', ax=ax)
+st.pyplot(fig)
+
+# Histograms
+st.subheader('Histograms')
+feature_hist = st.sidebar.selectbox('Select Feature for Histogram', penguins.columns, index=3)
+fig_hist = px.histogram(penguins, x=feature_hist, color=hue_feature, title=f'Histogram of {feature_hist}')
+st.plotly_chart(fig_hist)
+
+# Pairplot for multi-feature relationships
+st.subheader('Pairplot')
+if st.checkbox('Show Pairplot'):
+    st.write("Generating Pairplot...")
+    fig_pairplot = sns.pairplot(penguins, hue=hue_feature)
+    st.pyplot(fig_pairplot)
+  
 # Input features
 with st.sidebar:
   st.header('Input features')
